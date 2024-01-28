@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+
+{% block content %}
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Saved Emojis</h1>
+
+    <div class="row row-cols-1 row-cols-md-4 g-4">
+        {% for emoji in emojis %}
+            <div class="col">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <span style="font-size: 2rem;">{{ emoji.html_code }}</span>
+                        <p class="mt-2">{{ emoji.name }}</p>
+                        <button class="btn btn-primary" onclick="copyToClipboard('{{ emoji.html_code }}')">Copy</button>
+                        <!-- Button trigger modal -->
+                        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#updateModal-{{emoji.id}}">
+                            Update
+                        </button>
+                        
+                        <!-- Modal -->
+                        <div class="modal fade" id="updateModal-{{emoji.id}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="exampleModalLabel">Update Emoji Name</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                <div>
+                                    <input class="form-control" type="text" id="updated-name-{{emoji.id}}" value="{{ emoji.name }}">
+                                </div>
+                                </div>
+                                <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="updateEmoji('{{ emoji.id}}', '{{ emoji.name }}')">Update</button>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-{{emoji.id}}">
+                            Delete
+                        </button>
+                        
+                        <!-- Modal -->
+                        <div class="modal fade" id="deleteModal-{{emoji.id}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="exampleModalLabel">Delete Emoji</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                <div>
+                                    <p>Are you want to delete "{{ emoji.name }}"?</p>
+                                </div>
+                                </div>
+                                <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="deleteEmoji('{{ emoji.id}}')">Delete</button>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block more_js %}
+
+<script>
+    // Function to copy emoji to clipboard
+    function copyToClipboard(emojiCode) {
+        const dummyInput = document.createElement('input');
+        document.body.appendChild(dummyInput);
+        dummyInput.value = emojiCode;
+        dummyInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummyInput);
+        Swal.fire({
+            icon: 'success',
+            title: 'Copied!',
+            text: 'Emoji copied to clipboard.',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    }
+
+    // Function to update emoji
+    function updateEmoji(emojiId, currentName) {
+        const newNameInput = document.getElementById(`updated-name-${emojiId}`).value;
+        console.log(newNameInput)
+        if (newNameInput.trim() !== '') {
+            fetch(`/update-emoji/${emojiId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: newNameInput }),
+            })
+            .then(response => {
+                if (response.ok) {
+                    // You may choose to reload the page or update the UI after successful update
+                    const modalEl = document.getElementById(`updateModal-${emojiId}`)
+                    const modal = bootstrap.Modal.getInstance(modalEl)
+                    modal.hide()
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Updated!',
+                        text: 'Emoji name updated.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                    setTimeout(()=>{
+                        location.reload();
+                    },1400)
+                    console.log('Emoji updated successfully');
+                } else {
+                    console.error('Error updating emoji:', response.statusText);
+                }
+            })
+            .catch(error => {
+                console.log(error)
+                console.error('Error updating emoji:', error)
+            });
+        } else {
+            alert('Please enter a valid name.');
+        }
+    }
+
+
+    function deleteEmoji(emojiId) {
+        fetch(`/delete-emoji/${emojiId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                // You may choose to reload the page or update the UI after successful update
+                const modalEl = document.getElementById(`deleteModal-${emojiId}`)
+                const modal = bootstrap.Modal.getInstance(modalEl)
+                modal.hide()
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted!',
+                    text: 'Emoji name deleted.',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+                setTimeout(()=>{
+                    location.reload();
+                },1400)
+                
+                console.log('Emoji deleted successfully');
+            } else {
+                console.error('Error deleting emoji:', response.statusText);
+            }
+        })
+        .catch(error => {
+            console.log(error)
+            console.error('Error deleting emoji:', error)
+        });
+    }
+</script>
+{% endblock more_js %}

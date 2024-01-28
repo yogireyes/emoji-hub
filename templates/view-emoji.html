@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+
+
+
+{% block content %}
+
+<div class="container my-5">
+    <h1 class="text-center mb-4">EmojiHub</h1>
+
+    <!-- Category Selector -->
+    <div class="mb-3">
+        <label for="categorySelect" class="form-label">Select Emoji Category:</label>
+        <select id="categorySelect" class="form-select">
+            <option value="">All Categories</option>
+            <option value="smileys-and-people">Smileys and People</option>
+            <option value="animals-and-nature">Animals and Nature</option>
+            <option value="food-and-drink">Food and Drink</option>
+            <option value="travel-and-places">Travel and Places</option>
+            <option value="activities">Activities</option>
+            <option value="objects">Objects</option>
+            <option value="symbols">Symbols</option>
+            <option value="flags">Flags</option>
+        </select>
+    </div>
+
+    
+    <!-- Spinner -->
+    <div class="d-flex justify-content-center">
+        <div id="spinner" class="spinner-border" role="status" style="display: none;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+    
+
+    <!-- Emoji Display Area -->
+    <div id="card-section">
+        <div id="emojiDisplay" class="row row-cols-1 row-cols-md-4 g-4">
+            <!-- Emojis will be displayed here -->
+        </div>
+    </div>
+    
+</div>
+{% endblock %}
+
+
+{% block more_js %}
+<script>
+    const userId = "{{current_user.id}}"
+    console.log('user id',userId)
+    // Function to copy emoji to clipboard
+    function copyToClipboard(emojiCode) {
+        const dummyInput = document.createElement('input');
+        document.body.appendChild(dummyInput);
+        dummyInput.value = emojiCode;
+        dummyInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummyInput);
+
+        // Show Swal alert
+        Swal.fire({
+            icon: 'success',
+            title: 'Copied!',
+            text: 'Emoji copied to clipboard.',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    }
+
+    function saveToBackend(name, category, group, htmlCode, unicode) {
+    const emoji = {
+        name: name,
+        category: category,
+        group: group,
+        htmlCode: [htmlCode],
+        unicode: [unicode],
+        userId:userId
+
+    };
+
+    fetch('/save-emoji', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emoji),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Emoji saved to backend:', data);
+        Swal.fire({
+            icon: 'success',
+            title: 'Saved!',
+            text: 'Emoji saved.',
+            showConfirmButton: false,
+            timer: 1500
+        });
+        // You can handle the response from the backend here
+    })
+    .catch(error => console.error('Error saving emoji to backend:', error));
+}
+
+
+    // Function to fetch and display emojis based on the selected category
+    function displayEmojis(category) {
+        const apiUrl = category ? `https://emojihub.yurace.pro/api/all/category/${category}` : "https://emojihub.yurace.pro/api/all";
+        const spinner = document.getElementById('spinner');
+        const emojiDisplayEl = document.getElementById('card-section');
+        spinner.style.display = 'block';
+        emojiDisplayEl.style.display = 'none';
+
+
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                const emojiDisplay = document.getElementById('emojiDisplay');
+                emojiDisplay.innerHTML = ''; // Clear previous emojis
+
+                data.forEach(emoji => {
+                    const emojiCard = document.createElement('div');
+                    emojiCard.className = 'col';
+                    emojiCard.innerHTML = `<div class="card">
+                        <div class="card-body text-center">
+                            <span style="font-size: 2rem;">${emoji.htmlCode.map(code => code).join('')}</span>
+                            <p class="mt-2">${emoji.name}</p>
+                            <button class="btn btn-primary" onclick="copyToClipboard('${emoji.htmlCode.map(code => code).join('')}')">Copy</button>
+                            <button class="btn btn-success" onclick="saveToBackend('${emoji.name}', '${emoji.category}', '${emoji.group}', '${emoji.htmlCode[0]}', '${emoji.unicode[0]}')">Save</button>
+                        </div>
+                    </div>`;
+                    emojiDisplay.appendChild(emojiCard);
+                });
+
+                spinner.style.display = 'none';
+                emojiDisplayEl.style.display = 'block';
+            })
+            .catch(error => console.error('Error fetching emojis:', error));
+    }
+
+    // Event listener for category selection change
+    document.getElementById('categorySelect').addEventListener('change', function () {
+        const selectedCategory = this.value;
+        displayEmojis(selectedCategory);
+    });
+
+    // Initial load with all emojis
+    displayEmojis(null);
+</script>
+{% endblock more_js %}
+
+
